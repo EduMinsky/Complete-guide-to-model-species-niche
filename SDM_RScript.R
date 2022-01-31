@@ -1,4 +1,4 @@
-#Installing REquired packages:
+#Installing Rquired packages:
 installed.packages("rgbif")
 install.packages('dplyr')
 install.packages("magrittr")
@@ -31,16 +31,16 @@ library(usdm)
 library(dismo)
 library(sdm)
 installAll()
-#Getting occurrence for the puma panther
+#Getting occurrence for our target species
 #First, we are going to check on the name. Usually, one species has more then one name, so we need
-#to certificate that we are taking the right name
+#to certificate that we are searching for the right name
 name = name_suggest(q = 'Panthera onca')
-#It appears that there is indeed Panthera onca but also names for the subspecies. We need to make
-#sure that we want to take the Key for only our target species
+#It appears that there is indeed Panthera onca but also names for the subspecies. 
+#We need to make sure that we want to take the unique Key for  our target species
 name$data$key[1]#getting the key for our target species
 
 
-#OK, now we can search for the unique taxonkey for the speices:
+#OK, now we can search for the species that match this key:
 my_data=occ_search(taxonKey = name$data$key[1],hasCoordinate = TRUE,limit = 10000)
 my_data=my_data$data
 my_data
@@ -97,7 +97,7 @@ data_clean <- data_clean %>%
   filter(coordinateUncertaintyInMeters / 1000 <= 1000 | is.na(coordinateUncertaintyInMeters))
 
 #Plotting again:
-hist(data_clean$coordinateUncertaintyInMeters, breaks = 20)#Now, the majoraty of observations are falling
+hist(data_clean$coordinateUncertaintyInMeters, breaks = 20)#Now, the majority of observations are falling
 #between 0 and 200km
 #Remove unsuitable data sources
 table(data_clean$basisOfRecord)
@@ -108,7 +108,7 @@ data_clean <- dplyr::filter(data_clean, basisOfRecord == "HUMAN_OBSERVATION" |
                      basisOfRecord=='MACHINE_OBSERVATION' |
                      basisOfRecord =='MATERIAL_SAMPLE')
 table(data_clean$basisOfRecord)
-#n the next step we will remove records with suspicious individual counts. 
+#In the next step we will remove records with suspicious individual counts. 
 #GBIF includes few records of absence (individual count = 0) and suspiciously high occurrence counts, which might indicate inappropriate data or data entry problems.
 table(data_clean$individualCount)
 data_clean <- data_clean%>%
@@ -120,7 +120,7 @@ table(data_clean$individualCount)
 #Due to low quality technology.
 #Age of records
 table(data_clean$year)
-#Excluding records befor WWII
+#Excluding records before WWII
 data_clean <- data_clean%>%
   filter(year> 1945)
 table(data_clean$year)
@@ -130,10 +130,10 @@ table(data_clean$family)
 #Great! Every record has only one value (Felidae)
 #Now, let's check on taxonRank level:
 table(data_clean$taxonRank)
-#Im good with that
+#I am good with that
 
 #Now, we are going to check if our data are falling inside the IUCN Polygon
-#Seting the working directory for our polygon
+#Setting the working directory for our polygon
 setwd('C:/Users/User/Documents/GitHub/Species_Distribution_Model')
 polygon = readOGR('data_0.shp')
 plot(polygon)
@@ -153,14 +153,14 @@ range_flags
 data_final <- data_clean[range_flags, ]
 
 
-#Identify dataset with ddmm(degree minute) to dd.dd conversion error
+#Identify data set with ddmm(degree minute) to dd.dd conversion error
 out.ddmm <- cd_ddmm(data_final, lon = "decimalLongitude", lat = "decimalLatitude",
                     ds = "species", diagnostic = T, diff = 1,
                     value = "dataset")
 
 
 #Test for rasterized sampling
-#Let is identify datasets with a significant proportion of coordinates that have been collected in large scale lattice designs. 
+#We are going to identify datasets with a significant proportion of coordinates that have been collected in large scale lattice designs. 
 #These records might have a low precision and might therefore be problematic for some analyses.
 par(mfrow = c(2,2), mar = rep(2, 4))
 out.round <- cd_round(data_final, lon = "decimalLongitude",
@@ -173,11 +173,8 @@ out.round <- cd_round(data_final, lon = "decimalLongitude",
 #Our data has some problems with autocorrelation between 15 - 20 decimal latitude. We will deal 
 #with that now.
 
-#Importing the necessary package to deal with that
-install.packages('devtools')
-devtools::install_github("jcarlis3/ecoinfo@master")
-require(ecoinfo)
-#Now, we are going to deal with spatial autocorrelation.
+
+#we are going to deal with spatial autocorrelation.
 # It is important to deal with this problem because it can cause inflation to the niche model
 #First, we are going to transform our dataframe into spatial dataframe
 #Saving our dataframe first:
@@ -187,10 +184,10 @@ write.csv(data_final,'pantera_data.csv')
 coordinates(data_final) <- ~decimalLongitude+decimalLatitude
 plot(polygon)
 points(data_final)
-#Applying species thining
+#Applying species thinning
 install.packages('spThin') 
 library(spThin)
-#Transforming our dataframe into a simpler one:
+
 
 df =data.frame(data_final@coords)
 df$species='Panthera onca'
@@ -217,14 +214,14 @@ points(panthera)
 #Great!! Now we have a spatial dataframe with unique coordinates and also corrected for
 #spatial auto correlation
 
-#Lets give it a CRS:
+#Applying  a CRS:
 
 proj4string(panthera) <- CRS("+proj=longlat +datum=WGS84 +no_defs")
 
 #Now, lets save this as a shape file
 shapefile(x = panthera, file = "C:/Users/User/Documents/GitHub/Species_Distribution_Model/panthera_onca.shp")
 
-#OK! We have our spatial rarefied shapefile, now we need to gather our independent variables(environmental layers)
+#OK! We have our spatial rarefied shape file, now we need to gather our independent variables(environmental layers)
 #We are going to use the function getdata from Raster Package
 bioclim = getData(name = 'worldclim',var = 'bio',res = 5)
 bioclim@layers
@@ -270,7 +267,7 @@ a = list.files(pattern='.shp$')
 panthera_onca$species <- 1###########Create column where all values are number 1(1 means presence of species)
 panthera_onca@data <- panthera_onca@data[,'species',drop=F]####Drop all columns and keep only the species column
 
-#For our models to produce satisfatory outputs, first we need to select the best parameters.
+#For our models to produce satisfactory outputs, first we need to select the best parameters.
 #We are going to produce several models with different numbers of pseudo absence and do a sensibility test
 #Our goal is to choose the model with high sensibility
 
@@ -297,7 +294,7 @@ sdmData_2= read.sdm(a[[3]])
 
 #Now that we have all sdm data, lets test Which model has a better performance
 #Creating our SDM model:
-
+#First, for cross validation method
 m1_CV<-sdm(species~.,data = sdmData_1, methods=c('glm','brt','maxent','svm'),
         replication='cross-validation',cv.folds=5,n = 10, parallelSettings = list(ncore=4))
 
@@ -329,11 +326,11 @@ write.sdm(x = m1_boot,filename = 'm1_boot.sdm')
 write.sdm(x = m2_boot,filename = 'm2_boot.sdm')
 write.sdm(x = m10_boot,filename = 'm10_boot.sdm')
 
-#OK, analysing the results, we can see that none of the models did well.
-#Onepossible reason for that is that our calibration area are to small. Let's take a look
-#First, let's create a shapefile for our background data
+#OK, analyzing the results, we can see that none of the models did well.
+#One possible reason for that is that our calibration area are to small. Let's take a look
+#First, let's create a shape file for our background data
 
-m1_boot@data@info@coords#This is all datapoints(presence and background)
+m1_boot@data@info@coords#This is all data points(presence and background)
 m1_boot@data@species$species@background#This is the index of only the background data
 background = as.data.frame(m1_boot@data@info@coords)#Creating a dataframe with all datapoints
 background_sliced=background[c(m1_boot@data@species$species@background),]#Slicing our dataframe to only return
@@ -353,10 +350,10 @@ points(background_sliced,pch = 0)
 sdmData0.5=sdmData(species~.,train=panthera,
                   predictors=var_panthera,bg=list(n=64,method='vRandom',remove=T))#Creating a model with proportion of 1 to 0.5 presence pseudo absence
 write.sdm(x = sdmData0.5,filename = 'data_05.sdd')
-#OK, creating our models
+#OK, creating our models for CV method
 m0.5_CV<-sdm(species~.,data = sdmData0.5, methods=c('glm','brt','maxent','svm'),
            replication='cross-validation',cv.folds=5,n = 10, parallelSettings = list(ncore=4))
-
+#Model with bootstrapping method
 m0.5_boot<-sdm(species~.,data = sdmData0.5, methods=c('glm','brt','maxent','svm'),
              replication='boot',n = 10, parallelSettings = list(ncore=4))
 
